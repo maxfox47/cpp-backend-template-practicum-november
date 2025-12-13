@@ -537,7 +537,3 @@ std::string View::NormalizeTag(const std::string& tag) const {
 
 }  // namespace ui
 
-
-
-}  // namespace ui
-
