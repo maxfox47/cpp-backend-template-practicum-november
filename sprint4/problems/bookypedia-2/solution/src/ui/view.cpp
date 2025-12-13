@@ -184,8 +184,8 @@ bool View::DeleteBook(std::istream& cmd_input) const {
     if (!title.empty()) {
         auto books_dto = use_cases_.GetBooksByTitle(title);
         if (books_dto.empty()) {
-            // Книга не найдена - это ошибка удаления
-            output_ << "Failed to delete book"sv << std::endl;
+            // Книга не найдена по названию
+            output_ << "Book not found"sv << std::endl;
             return true;
         }
         if (books_dto.size() == 1) {
@@ -208,8 +208,16 @@ bool View::DeleteBook(std::istream& cmd_input) const {
     try {
         use_cases_.DeleteBook(*book_id);
         // При успешном удалении ничего не выводим
+    } catch (const std::runtime_error& e) {
+        std::string error_msg = e.what();
+        if (error_msg == "Book not found") {
+            // Книга была удалена параллельно
+            output_ << "Failed to delete book"sv << std::endl;
+        } else {
+            output_ << "Failed to delete book"sv << std::endl;
+        }
     } catch (const std::exception&) {
-        // При любой ошибке выводим сообщение
+        // При любой другой ошибке выводим сообщение
         output_ << "Failed to delete book"sv << std::endl;
     }
     return true;
@@ -230,14 +238,17 @@ bool View::EditBook(std::istream& cmd_input) const {
                 auto books_dto = use_cases_.GetBooksByTitle(title);
                 if (books_dto.empty()) {
                     output_ << "Book not found"sv << std::endl;
+                } else {
+                    // Если книги найдены, но выбор отменен, выводим "Book not found"
+                    output_ << "Book not found"sv << std::endl;
                 }
-                // Если книги найдены, но выбор отменен, ничего не выводим
                 return true;
             }
         } else {
             book_id = SelectBook();
             if (!book_id.has_value()) {
-                // При отмене выбора книги ничего не выводим и не читаем дальнейший ввод
+                // При отмене выбора книги выводим "Book not found"
+                output_ << "Book not found"sv << std::endl;
                 return true;
             }
         }
@@ -286,8 +297,8 @@ bool View::EditBook(std::istream& cmd_input) const {
         if (!tags_input.empty()) {
             final_tags = NormalizeTags(tags_input);
         } else {
-            // Пустая строка означает сохранение текущих тегов (не изменяем)
-            final_tags = std::nullopt;
+            // Пустая строка означает удаление всех тегов (пустой вектор)
+            final_tags = std::vector<std::string>();
         }
         
         use_cases_.EditBook(*book_id, final_title, final_year, final_tags);
@@ -377,6 +388,10 @@ std::optional<detail::AddBookParams> View::GetBookParams(std::istream& cmd_input
     }
     
     if (!author_id.has_value()) {
+        // Читаем теги, чтобы они не попали в следующий ввод как команды
+        output_ << "Enter tags (comma separated):" << std::endl;
+        std::string dummy_tags;
+        std::getline(input_, dummy_tags);
         return std::nullopt;
     }
     params.author_id = *author_id;
