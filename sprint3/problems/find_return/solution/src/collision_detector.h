@@ -1,0 +1,68 @@
+#pragma once
+
+#include "geom.h"
+
+#include <algorithm>
+#include <vector>
+
+namespace collision_detector {
+
+struct CollectionResult {
+    CollectionResult() = default;
+    CollectionResult(double sq_dist, double proj) 
+        : sq_distance(sq_dist), proj_ratio(proj) {}
+    
+    bool IsCollected(double collect_radius) const {
+        const double max_sq_distance = collect_radius * collect_radius;
+        // Учитываем погрешность вычислений с плавающей точкой для граничных случаев
+        // При вычислении sq_distance через формулу u_len2 - (u_dot_v * u_dot_v) / v_len2
+        // может возникать погрешность из-за вычитания близких чисел
+        const double epsilon = 1e-10;
+        return proj_ratio >= 0 && proj_ratio <= 1 && sq_distance <= max_sq_distance + epsilon;
+    }
+
+    // квадрат расстояния до точки
+    double sq_distance;
+
+    // доля пройденного отрезка
+    double proj_ratio;
+};
+
+// Движемся из точки a в точку b и пытаемся подобрать точку c.
+// Эта функция реализована в уроке.
+CollectionResult TryCollectPoint(geom::Point2D a, geom::Point2D b, geom::Point2D c);
+
+struct Item {
+    geom::Point2D position;
+    double width;
+};
+
+struct Gatherer {
+    geom::Point2D start_pos;
+    geom::Point2D end_pos;
+    double width;
+};
+
+class ItemGathererProvider {
+protected:
+    ~ItemGathererProvider() = default;
+
+public:
+    virtual size_t ItemsCount() const = 0;
+    virtual Item GetItem(size_t idx) const = 0;
+    virtual size_t GatherersCount() const = 0;
+    virtual Gatherer GetGatherer(size_t idx) const = 0;
+};
+
+struct GatheringEvent {
+    size_t item_id;
+    size_t gatherer_id;
+    double sq_distance;
+    double time;
+};
+
+// Эту функцию вам нужно будет реализовать в соответствующем задании.
+// При проверке ваших тестов она не нужна - функция будет линковаться снаружи.
+std::vector<GatheringEvent> FindGatherEvents(const ItemGathererProvider& provider);
+
+}  // namespace collision_detector

@@ -1,0 +1,82 @@
+ФРЕЙМВОРКИ ТЕСТИРОВАНИЯ C++
+
+В проекте использованы три фреймворка для модульного тестирования:
+
+1. BOOST.TEST
+   Использован в: urldecode
+   Основные макросы:
+   - BOOST_TEST - проверка условия
+   - BOOST_CHECK - проверка без остановки теста при ошибке
+   - BOOST_REQUIRE - проверка с остановкой теста при ошибке
+   - BOOST_CHECK_THROW - проверка выброса исключения
+   
+   Пример:
+   BOOST_TEST(UrlDecode("Hello%20World"sv) == "Hello World"s);
+   BOOST_CHECK_THROW(UrlDecode("%"sv), std::invalid_argument);
+
+2. GOOGLETEST (GTEST)
+   Использован в: urlencode, tv
+   Основные макросы:
+   - EXPECT_EQ - проверка равенства (не останавливает тест)
+   - ASSERT_EQ - проверка равенства (останавливает тест)
+   - EXPECT_THROW - проверка выброса исключения
+   - TEST - определение теста
+   - TEST_F - тест с фикстурой
+   
+   Пример:
+   EXPECT_EQ(UrlEncode("Hello World"sv), "Hello+World"s);
+   ASSERT_EQ(UrlEncode("test"sv), "test"s);
+
+3. CATCH2
+   Использован в: htmldecode, gen_objects
+   Основные макросы:
+   - CHECK - проверка без остановки теста
+   - REQUIRE - проверка с остановкой теста
+   - TEST_CASE - определение теста
+   - SCENARIO - BDD-стиль тестирования (Given-When-Then)
+   - GIVEN/WHEN/THEN - BDD синтаксис
+   
+   Пример:
+   CHECK(HtmlDecode("&lt;"sv) == "<"s);
+   REQUIRE(HtmlDecode("hello"sv) == "hello"s);
+   
+   BDD стиль:
+   SCENARIO("Loot generation") {
+       GIVEN("a loot generator") {
+           WHEN("loot count is enough") {
+               THEN("no loot is generated") {
+                   // проверки
+               }
+           }
+       }
+   }
+
+СРАВНЕНИЕ:
+
+Boost.Test:
++ Интеграция с Boost
++ Много возможностей
+- Большая зависимость
+- Медленнее компиляция
+
+GoogleTest:
++ Стандарт индустрии
++ Отличная документация
++ Мощные возможности (моки, параметризация)
++ Быстрая компиляция
+- Больше зависимостей чем Catch2
+
+Catch2:
++ Максимальная простота
++ Header-only (быстрая компиляция)
++ BDD стиль
++ Минимальные зависимости
+- Меньше встроенных функций
+- Моки требуют доп. библиотек
+
+РЕКОМЕНДАЦИИ:
+
+Для новых проектов: GoogleTest (баланс функциональности и простоты)
+Для header-only библиотек: Catch2 (минимальные зависимости)
+Для проектов с Boost: Boost.Test (интеграция с экосистемой)
+

@@ -1,0 +1,9 @@
+[requires]
+boost/1.78.0
+
+[generators]
+cmake
+
+[options]
+boost:shared=False
+

@@ -23,3 +23,6 @@ endif()
 
 add_executable(radio src/main.cpp src/audio.h)
 target_link_libraries(radio PRIVATE Threads::Threads)
+if (WIN32)
+  target_link_libraries(radio PRIVATE ws2_32)
+endif()
