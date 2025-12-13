@@ -16,9 +16,10 @@ void AuthorRepositoryImpl::Save(const domain::Author& author) {
 }
 
 std::vector<domain::Author> AuthorRepositoryImpl::GetAll() const {
-    pqxx::read_transaction tr{connection_};
+    pqxx::work tr{connection_};
     std::vector<domain::Author> authors;
     auto res = tr.exec(R"(SELECT id, name FROM authors ORDER BY LOWER(name), name;)"_zv);
+    tr.commit();
     for (const auto& row : res) {
         authors.emplace_back(domain::AuthorId::FromString(row[0].c_str()),
                              row[1].c_str());
@@ -58,10 +59,11 @@ void AuthorRepositoryImpl::Edit(const domain::AuthorId& author_id, const std::st
 }
 
 std::optional<domain::Author> AuthorRepositoryImpl::GetById(const domain::AuthorId& author_id) const {
-    pqxx::read_transaction tr{connection_};
+    pqxx::work tr{connection_};
     auto res = tr.exec_params(
         R"(SELECT id, name FROM authors WHERE id = $1;)"_zv,
         author_id.ToString());
+    tr.commit();
     if (res.empty()) {
         return std::nullopt;
     }
@@ -71,10 +73,11 @@ std::optional<domain::Author> AuthorRepositoryImpl::GetById(const domain::Author
 }
 
 std::optional<domain::Author> AuthorRepositoryImpl::GetByName(const std::string& name) const {
-    pqxx::read_transaction tr{connection_};
+    pqxx::work tr{connection_};
     auto res = tr.exec_params(
         R"(SELECT id, name FROM authors WHERE name = $1;)"_zv,
         name);
+    tr.commit();
     if (res.empty()) {
         return std::nullopt;
     }
@@ -114,11 +117,12 @@ VALUES ($1, $2, $3, $4);
 }
 
 std::vector<domain::Book> BookRepositoryImpl::GetAll() const {
-    pqxx::read_transaction tr{connection_};
+    pqxx::work tr{connection_};
     std::vector<domain::Book> books;
     auto res = tr.exec(
         R"(SELECT id, author_id, title, publication_year FROM books
            ORDER BY title, author_id, publication_year;)"_zv);
+    tr.commit();
     for (const auto& row : res) {
         books.emplace_back(domain::BookId::FromString(row[0].c_str()),
                            domain::AuthorId::FromString(row[1].c_str()),
@@ -130,13 +134,14 @@ std::vector<domain::Book> BookRepositoryImpl::GetAll() const {
 
 std::vector<domain::Book> BookRepositoryImpl::GetByAuthor(
     const domain::AuthorId& author_id) const {
-    pqxx::read_transaction tr{connection_};
+    pqxx::work tr{connection_};
     std::vector<domain::Book> books;
     auto res = tr.exec_params(
         R"(SELECT id, author_id, title, publication_year FROM books
            WHERE author_id = $1
            ORDER BY publication_year, title;)"_zv,
         author_id.ToString());
+    tr.commit();
     for (const auto& row : res) {
         books.emplace_back(domain::BookId::FromString(row[0].c_str()),
                            domain::AuthorId::FromString(row[1].c_str()),
@@ -147,13 +152,14 @@ std::vector<domain::Book> BookRepositoryImpl::GetByAuthor(
 }
 
 std::vector<domain::Book> BookRepositoryImpl::GetByTitle(const std::string& title) const {
-    pqxx::read_transaction tr{connection_};
+    pqxx::work tr{connection_};
     std::vector<domain::Book> books;
     auto res = tr.exec_params(
         R"(SELECT id, author_id, title, publication_year FROM books
            WHERE title = $1
            ORDER BY title, author_id, publication_year;)"_zv,
         title);
+    tr.commit();
     for (const auto& row : res) {
         books.emplace_back(domain::BookId::FromString(row[0].c_str()),
                            domain::AuthorId::FromString(row[1].c_str()),
@@ -164,10 +170,11 @@ std::vector<domain::Book> BookRepositoryImpl::GetByTitle(const std::string& titl
 }
 
 std::optional<domain::Book> BookRepositoryImpl::GetById(const domain::BookId& book_id) const {
-    pqxx::read_transaction tr{connection_};
+    pqxx::work tr{connection_};
     auto res = tr.exec_params(
         R"(SELECT id, author_id, title, publication_year FROM books WHERE id = $1;)"_zv,
         book_id.ToString());
+    tr.commit();
     if (res.empty()) {
         return std::nullopt;
     }
@@ -234,11 +241,12 @@ void BookRepositoryImpl::SetTags(const domain::BookId& book_id, const std::vecto
 }
 
 std::vector<std::string> BookRepositoryImpl::GetTags(const domain::BookId& book_id) const {
-    pqxx::read_transaction tr{connection_};
+    pqxx::work tr{connection_};
     std::vector<std::string> tags;
     auto res = tr.exec_params(
         R"(SELECT tag FROM book_tags WHERE book_id = $1 ORDER BY tag;)"_zv,
         book_id.ToString());
+    tr.commit();
     for (const auto& row : res) {
         tags.push_back(row[0].c_str());
     }
