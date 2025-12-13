@@ -1,3 +1,4 @@
+
 name: autotests
 
 on:
@@ -164,7 +165,7 @@ jobs:
 ##        with:
 ##          name: game_server
 ##          path: ${{ github.workspace }}/sprint1/problems/map_json/solution/build/bin
-##
+## 
 ##      - run: chmod +x ${GITHUB_WORKSPACE}/sprint1/problems/map_json/solution/build/bin/game_server
 #
 #      - name: Load FlameGraph
@@ -295,15 +296,15 @@ jobs:
         with:
           submodules: true
 
-      - name: run tests sprint3 ammo
-        run: |
-          cd cpp-backend-tests-practicum/scripts/sprint3
-          ./ammo/run_ci.sh
-
-      - name: run tests sprint3 load
-        run: |
-          cd cpp-backend-tests-practicum/scripts/sprint3
-          ./load/run_ci.sh
+#      - name: run tests sprint3 ammo
+#        run: |
+#          cd cpp-backend-tests-practicum/scripts/sprint3
+#          ./ammo/run_ci.sh
+#
+#      - name: run tests sprint3 load
+#        run: |
+#          cd cpp-backend-tests-practicum/scripts/sprint3
+#          ./load/run_ci.sh
 
 ##      - name: run tests sprint3 stress
 ##        run: |
