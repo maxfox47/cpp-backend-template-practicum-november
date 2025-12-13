@@ -58,11 +58,10 @@ void AuthorRepositoryImpl::Edit(const domain::AuthorId& author_id, const std::st
 }
 
 std::optional<domain::Author> AuthorRepositoryImpl::GetById(const domain::AuthorId& author_id) const {
-    pqxx::work tr{connection_};
+    pqxx::read_transaction tr{connection_};
     auto res = tr.exec_params(
         R"(SELECT id, name FROM authors WHERE id = $1;)"_zv,
         author_id.ToString());
-    tr.commit();
     if (res.empty()) {
         return std::nullopt;
     }
@@ -131,14 +130,13 @@ std::vector<domain::Book> BookRepositoryImpl::GetAll() const {
 
 std::vector<domain::Book> BookRepositoryImpl::GetByAuthor(
     const domain::AuthorId& author_id) const {
-    pqxx::work tr{connection_};
+    pqxx::read_transaction tr{connection_};
     std::vector<domain::Book> books;
     auto res = tr.exec_params(
         R"(SELECT id, author_id, title, publication_year FROM books
            WHERE author_id = $1
            ORDER BY publication_year, title;)"_zv,
         author_id.ToString());
-    tr.commit();
     for (const auto& row : res) {
         books.emplace_back(domain::BookId::FromString(row[0].c_str()),
                            domain::AuthorId::FromString(row[1].c_str()),
