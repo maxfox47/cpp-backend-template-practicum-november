@@ -28,6 +28,15 @@ std::vector<domain::Author> AuthorRepositoryImpl::GetAll() const {
 
 void AuthorRepositoryImpl::Delete(const domain::AuthorId& author_id) {
     pqxx::work work{connection_};
+    // Сначала удаляем теги всех книг автора
+    work.exec_params(
+        R"(DELETE FROM book_tags WHERE book_id IN (SELECT id FROM books WHERE author_id = $1);)"_zv,
+        author_id.ToString());
+    // Затем удаляем все книги автора
+    work.exec_params(
+        R"(DELETE FROM books WHERE author_id = $1;)"_zv,
+        author_id.ToString());
+    // Наконец удаляем самого автора
     auto res = work.exec_params(
         R"(DELETE FROM authors WHERE id = $1;)"_zv,
         author_id.ToString());
@@ -171,6 +180,11 @@ std::optional<domain::Book> BookRepositoryImpl::GetById(const domain::BookId& bo
 
 void BookRepositoryImpl::Delete(const domain::BookId& book_id) {
     pqxx::work work{connection_};
+    // Сначала удаляем все теги книги
+    work.exec_params(
+        R"(DELETE FROM book_tags WHERE book_id = $1;)"_zv,
+        book_id.ToString());
+    // Затем удаляем саму книгу
     auto res = work.exec_params(
         R"(DELETE FROM books WHERE id = $1;)"_zv,
         book_id.ToString());
