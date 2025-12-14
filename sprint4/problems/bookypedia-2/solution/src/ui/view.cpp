@@ -104,7 +104,11 @@ bool View::ShowBooks() const {
 bool View::ShowAuthorBooks() const {
     try {
         if (auto author_id = SelectAuthor()) {
-            PrintVector(output_, GetAuthorBooks(*author_id));
+            auto books = GetAuthorBooks(*author_id);
+            int i = 1;
+            for (const auto& book : books) {
+                output_ << i++ << " " << book.title << ", " << book.publication_year << std::endl;
+            }
         }
     } catch (const std::exception&) {
         throw std::runtime_error("Failed to Show Books");
