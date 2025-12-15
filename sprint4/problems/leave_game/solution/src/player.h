@@ -56,19 +56,19 @@ class Player {
 
 	const std::vector<model::TakenItem>& GetBag() const { return dog_->GetBag(); }
 
-	std::chrono::steady_clock::time_point GetJoinTime() const { return join_time_; }
-
+	// Игровое время, проведённое в сессии, берём из модели пса,
+	// которая накапливается по тикам игрового времени.
 	double GetTotalPlayTime() const {
-		auto now = std::chrono::steady_clock::now();
-		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - join_time_);
-		return duration.count() / 1000.0;
+		if (!dog_) {
+			return 0.0;
+		}
+		return dog_->GetPlayTime();
 	}
 
  private:
 	model::Dog* dog_;
 	model::GameSession* session_;
 	uint64_t id_;
-	std::chrono::steady_clock::time_point join_time_;
 };
 
 class Players {

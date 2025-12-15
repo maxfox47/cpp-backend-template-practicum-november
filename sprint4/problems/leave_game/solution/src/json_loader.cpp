@@ -63,20 +63,20 @@ model::Office LoadOffice(const json::value& office_json_not) {
 model::Game LoadGame(const std::filesystem::path& json_path) {
 	std::string json_str = LoadJsonFile(json_path);
 	auto value = json::parse(json_str);
-	double def_speed = 1;
-	int def_capacity = 3;
-	double retirement_time = 60;
+	double default_speed = 1.0;
+	int default_bag_capacity = 3;
+	double dog_retirement_time_seconds = 60.0;
 
 	if (value.as_object().contains("defaultDogSpeed")) {
-		def_speed = value.as_object().at("defaultDogSpeed").as_double();
+		default_speed = value.as_object().at("defaultDogSpeed").as_double();
 	}
 
 	if (value.as_object().contains("defaultBagCapacity")) {
-		def_capacity = value.as_object().at("defaultBagCapacity").as_int64();
+		default_bag_capacity = static_cast<int>(value.as_object().at("defaultBagCapacity").as_int64());
 	}
 
 	if (value.as_object().contains("dogRetirementTime")) {
-		retirement_time = value.as_object().at("dogRetirementTime").as_int64();
+		dog_retirement_time_seconds = value.as_object().at("dogRetirementTime").as_double();
 	}
 
 	const auto maps = value.at("maps").as_array();
@@ -105,13 +105,13 @@ model::Game LoadGame(const std::filesystem::path& json_path) {
 		if (map_json.as_object().contains("dogSpeed")) {
 			map.SetDefaultSpeed(map_json.as_object().at("dogSpeed").as_double());
 		} else {
-			map.SetDefaultSpeed(def_speed);
+			map.SetDefaultSpeed(default_speed);
 		}
 
 		if (map_json.as_object().contains("bagCapacity")) {
-			map.SetBagCapacity(map_json.as_object().at("bagCapacity").as_double());
+			map.SetBagCapacity(static_cast<int>(map_json.as_object().at("bagCapacity").as_int64()));
 		} else {
-			map.SetBagCapacity(def_capacity);
+			map.SetBagCapacity(default_bag_capacity);
 		}
 
 		const auto loot_types = map_json.at("lootTypes").as_array();
@@ -141,7 +141,7 @@ model::Game LoadGame(const std::filesystem::path& json_path) {
 		double probability = loot_gen_cfg.at("probability").as_double();
 		game.SetPeriod(period);
 		game.SetProbability(probability);
-		game.SetRetirementTime(retirement_time);
+		game.SetRetirementTime(dog_retirement_time_seconds);
 
 		game.AddMap(map);
 	}
