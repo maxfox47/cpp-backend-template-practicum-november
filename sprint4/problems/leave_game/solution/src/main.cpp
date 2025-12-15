@@ -145,25 +145,14 @@ int main(int argc, const char* argv[]) {
 		std::unique_ptr<Database> database;
 
 		if (db_url_cstr) {
+			std::string db_url{db_url_cstr};
 			try {
-				// Сначала пробуем создать тестовое соединение, чтобы убедиться, что БД доступна
-				std::string db_url{db_url_cstr};
-				pqxx::connection test_conn{db_url};
-				pqxx::work test_txn{test_conn};
-				test_txn.exec("SELECT 1");
-				test_txn.commit();
-
-				// Если тестовое соединение успешно, создаём пул
 				connection_pool = std::make_unique<ConnectionPool>(
 					 1, [db_url]() { return std::make_shared<pqxx::connection>(db_url); });
-
 				InitDatabaseSchema(*connection_pool);
 				database = std::make_unique<Database>(*connection_pool);
-			} catch (const std::exception& ex) {
-				// Не даём серверу упасть из‑за проблем с БД: просто логируем и продолжаем без неё.
-				BOOST_LOG_TRIVIAL(error)
-					 << logging::add_value(exception_c, ex.what())
-					 << "failed to initialize database schema";
+			} catch (...) {
+				// Игнорируем ошибки БД, продолжаем работу без неё
 				connection_pool.reset();
 				database.reset();
 			}
