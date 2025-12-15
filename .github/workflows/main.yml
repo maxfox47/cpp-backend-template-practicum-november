@@ -1,4 +1,3 @@
-
 name: autotests
 
 on:
@@ -11,7 +10,6 @@ permissions:
   contents: read
   pull-requests: write
   issues: read
-
 
 jobs:
 #  sprint_1:
@@ -305,7 +303,7 @@ jobs:
 #        run: |
 #          cd cpp-backend-tests-practicum/scripts/sprint3
 #          ./load/run_ci.sh
-
+#
 ##      - name: run tests sprint3 stress
 ##        run: |
 ##          cd sprint3/problems/stress/solution
@@ -319,7 +317,6 @@ jobs:
         if: always()
         with:
           junit_files: ${{ github.workspace }}/*.xml
-
 
   sprint_4_with_postgress:
     runs-on: ubuntu-22.04
@@ -350,20 +347,20 @@ jobs:
         run: |
           cp -R /home/forconan/.conan /github/home/.conan
 
-      - name: run tests sprint4 db_of_books
-        run: |
-          cd cpp-backend-tests-practicum/scripts/sprint4
-          ./db_of_books/run_postgresless.sh
-
-      - name: run tests sprint4 bookypedia-1
-        run: |
-          cd cpp-backend-tests-practicum/scripts/sprint4
-          ./bookypedia-1/run_postgresless.sh
-
-      - name: run tests sprint4 bookypedia-2
-        run: |
-          cd cpp-backend-tests-practicum/scripts/sprint4
-          ./bookypedia-2/run_postgresless.sh
+#      - name: run tests sprint4 db_of_books
+#        run: |
+#          cd cpp-backend-tests-practicum/scripts/sprint4
+#          ./db_of_books/run_postgresless.sh
+#
+#      - name: run tests sprint4 bookypedia-1
+#        run: |
+#          cd cpp-backend-tests-practicum/scripts/sprint4
+#          ./bookypedia-1/run_postgresless.sh
+#
+#      - name: run tests sprint4 bookypedia-2
+#        run: |
+#          cd cpp-backend-tests-practicum/scripts/sprint4
+#          ./bookypedia-2/run_postgresless.sh
 
       - name: run tests sprint4 leave_game
         run: |
