@@ -146,8 +146,16 @@ int main(int argc, const char* argv[]) {
 
 		if (db_url_cstr) {
 			try {
+				// Сначала пробуем создать тестовое соединение, чтобы убедиться, что БД доступна
+				std::string db_url{db_url_cstr};
+				pqxx::connection test_conn{db_url};
+				pqxx::work test_txn{test_conn};
+				test_txn.exec("SELECT 1");
+				test_txn.commit();
+
+				// Если тестовое соединение успешно, создаём пул
 				connection_pool = std::make_unique<ConnectionPool>(
-					 1, [db_url_cstr]() { return std::make_shared<pqxx::connection>(db_url_cstr); });
+					 1, [db_url]() { return std::make_shared<pqxx::connection>(db_url); });
 
 				InitDatabaseSchema(*connection_pool);
 				database = std::make_unique<Database>(*connection_pool);
