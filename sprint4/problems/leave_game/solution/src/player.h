@@ -24,7 +24,7 @@ struct PlayerInfo {
 class Player {
  public:
 	explicit Player(model::GameSession* session, model::Dog* dog, uint64_t id)
-		 : dog_(dog), session_(session), id_(id), join_time_(std::chrono::steady_clock::now()) {
+		 : dog_(dog), session_(session), id_(id) {
 		if (!session)
 			throw std::invalid_argument("Session cannot be null");
 		if (!dog)
