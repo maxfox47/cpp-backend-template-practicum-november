@@ -60,4 +60,3 @@ struct GatheringEvent {
 std::vector<GatheringEvent> FindGatherEvents(const ItemGathererProvider& provider);
 
 } // namespace collision_detector
-

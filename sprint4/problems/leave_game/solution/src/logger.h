@@ -110,4 +110,3 @@ inline void JsonFormatter(logging::record_view const& rec, logging::formatting_o
 
 	strm << log_entry;
 }
-

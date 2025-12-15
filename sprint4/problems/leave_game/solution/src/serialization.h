@@ -18,4 +18,3 @@ void SerializeGameState(const std::string& file, const model::Game& game);
 void DeserializeGameState(const std::string& file, model::Game& game);
 
 } // namespace serialization
-

@@ -33,8 +33,8 @@ class RequestHandler : public std::enable_shared_from_this<RequestHandler> {
 
 	explicit RequestHandler(model::Game& game, fs::path static_files, Strand strand, bool randomize,
 									bool auto_tick, StateSaver& saver, app::Players& players,
-									app::PlayerTokens& tokens)
-		 : api_handler_(game, randomize, auto_tick, saver, players, tokens),
+									app::PlayerTokens& tokens, Database* database = nullptr)
+		 : api_handler_(game, randomize, auto_tick, saver, players, tokens, database),
 			static_files_(static_files), api_strand_(strand) {}
 
 	RequestHandler(const RequestHandler&) = delete;
@@ -186,4 +186,3 @@ class LoggingRequestHandler {
 };
 
 } // namespace http_handler
-

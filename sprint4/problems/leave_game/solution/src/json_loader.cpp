@@ -65,12 +65,18 @@ model::Game LoadGame(const std::filesystem::path& json_path) {
 	auto value = json::parse(json_str);
 	double def_speed = 1;
 	int def_capacity = 3;
+	double retirement_time = 60;
+
 	if (value.as_object().contains("defaultDogSpeed")) {
 		def_speed = value.as_object().at("defaultDogSpeed").as_double();
 	}
 
 	if (value.as_object().contains("defaultBagCapacity")) {
-		def_speed = value.as_object().at("defaultBagCapacity").as_int64();
+		def_capacity = value.as_object().at("defaultBagCapacity").as_int64();
+	}
+
+	if (value.as_object().contains("dogRetirementTime")) {
+		retirement_time = value.as_object().at("dogRetirementTime").as_int64();
 	}
 
 	const auto maps = value.at("maps").as_array();
@@ -135,6 +141,7 @@ model::Game LoadGame(const std::filesystem::path& json_path) {
 		double probability = loot_gen_cfg.at("probability").as_double();
 		game.SetPeriod(period);
 		game.SetProbability(probability);
+		game.SetRetirementTime(retirement_time);
 
 		game.AddMap(map);
 	}
@@ -143,4 +150,3 @@ model::Game LoadGame(const std::filesystem::path& json_path) {
 }
 
 } // namespace json_loader
-

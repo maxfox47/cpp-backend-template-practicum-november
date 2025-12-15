@@ -56,4 +56,3 @@ class Ticker : public std::enable_shared_from_this<Ticker> {
 	Handler handler_;
 	std::chrono::steady_clock::time_point last_tick_;
 };
-

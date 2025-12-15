@@ -1,5 +1,6 @@
 [requires]
 boost/1.78.0
+libpqxx/7.9.2
 catch2/3.6.0
 
 [generators]

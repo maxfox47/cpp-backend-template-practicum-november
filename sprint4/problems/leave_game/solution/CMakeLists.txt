@@ -1,3 +1,4 @@
+
 cmake_minimum_required(VERSION 3.11)
 
 project(game_server CXX)
@@ -69,6 +70,7 @@ target_include_directories(game_server PRIVATE Threads::Threads CONAN_PKG::boost
 target_link_libraries(game_server PRIVATE
  Threads::Threads
 CONAN_PKG::boost
+CONAN_PKG::libpqxx
 model_lib
 collision_detection_lib
 )

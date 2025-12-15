@@ -2,6 +2,7 @@
 
 #include "endpoint.h"
 // #include "http_server.h"
+#include "database.h"
 #include "model.h"
 #include "player.h"
 #include "state_saver.h"
@@ -89,9 +90,15 @@ class ApiHandler {
 	using StringResponse = http::response<http::string_body>;
 
 	explicit ApiHandler(model::Game& game, bool randomize, bool auto_tick, StateSaver& saver,
-							  app::Players& players, app::PlayerTokens& tokens)
-		 : game_(game), randomize_(randomize), auto_tick_(auto_tick), state_saver_(saver),
-			players_(players), players_tokens_(tokens) {}
+							  app::Players& players, app::PlayerTokens& tokens,
+							  Database* database = nullptr)
+		 : game_(game)
+		 , players_(players)
+		 , players_tokens_(tokens)
+		 , randomize_(randomize)
+		 , auto_tick_(auto_tick)
+		 , state_saver_(saver)
+		 , database_(database) {}
 
 	template <typename Body, typename Allocator, typename Send>
 	void operator()(const EndPoint& endpoint,
@@ -122,6 +129,10 @@ class ApiHandler {
 
 		if (endpoint.IsTickReq()) {
 			return TickRequest(req, std::move(send));
+		}
+
+		if (endpoint.IsRecordsReq()) {
+			return RecordsRequest(req, std::move(send));
 		}
 
 		return send(BadRequest(
@@ -339,6 +350,95 @@ class ApiHandler {
 		return send(GoodTickRequest(req));
 	}
 
+	template <typename Body, typename Allocator, typename Send>
+	void RecordsRequest(const http::request<Body, http::basic_fields<Allocator>>& req, Send&& send) {
+		auto ver = req.version();
+		CheckMethod(req, send, "GET");
+
+		if (!database_) {
+			return send(ErrorRequest("serverError", "Database not available",
+											 http::status::internal_server_error, ver));
+		}
+
+		// Парсим параметры запроса
+		int start = 0;
+		int max_items = 100;
+
+		std::string target(req.target());
+		size_t query_pos = target.find('?');
+		if (query_pos != std::string::npos) {
+			std::string query = target.substr(query_pos + 1);
+			auto params = ParseQueryString(query);
+
+			if (params.count("start")) {
+				try {
+					start = std::stoi(params["start"]);
+				} catch (...) {
+					return send(ErrorRequest("badRequest", "Invalid start parameter",
+													 http::status::bad_request, ver));
+				}
+			}
+
+			if (params.count("maxItems")) {
+				try {
+					max_items = std::stoi(params["maxItems"]);
+					if (max_items > 100) {
+						return send(ErrorRequest("badRequest", "maxItems cannot exceed 100",
+														 http::status::bad_request, ver));
+					}
+				} catch (...) {
+					return send(ErrorRequest("badRequest", "Invalid maxItems parameter",
+													 http::status::bad_request, ver));
+				}
+			}
+		}
+
+		try {
+			auto records = database_->GetRecords(start, max_items);
+
+			json::array records_arr;
+			for (const auto& record : records) {
+				json::object obj;
+				obj["name"] = record.name;
+				obj["score"] = record.score;
+				obj["playTime"] = record.play_time;
+				records_arr.push_back(std::move(obj));
+			}
+
+			std::string json_str = json::serialize(records_arr);
+
+			StringResponse response{http::status::ok, ver};
+			response.set(http::field::content_type, "application/json");
+			response.set(http::field::cache_control, "no-cache");
+			response.set(http::field::content_length, std::to_string(json_str.size()));
+			response.keep_alive(req.keep_alive());
+			response.body() = json_str;
+			response.prepare_payload();
+
+			return send(std::move(response));
+		} catch (const std::exception& e) {
+			return send(ErrorRequest("serverError", "Database error",
+											 http::status::internal_server_error, ver));
+		}
+	}
+
+	std::map<std::string, std::string> ParseQueryString(const std::string& query) {
+		std::map<std::string, std::string> params;
+		std::istringstream iss(query);
+		std::string pair;
+
+		while (std::getline(iss, pair, '&')) {
+			size_t eq_pos = pair.find('=');
+			if (eq_pos != std::string::npos) {
+				std::string key = pair.substr(0, eq_pos);
+				std::string value = pair.substr(eq_pos + 1);
+				params[key] = value;
+			}
+		}
+
+		return params;
+	}
+
 	json::array AddRoads(const model::Map* map) const;
 	json::array AddBuildings(const model::Map* map) const;
 	json::array AddOffices(const model::Map* map) const;
@@ -362,7 +462,7 @@ class ApiHandler {
 	bool randomize_;
 	bool auto_tick_;
 	StateSaver& state_saver_;
+	Database* database_;
 };
 
 } // namespace http_handler
-

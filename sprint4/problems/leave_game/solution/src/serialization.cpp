@@ -214,4 +214,3 @@ void DeserializeGameState(const std::string& file, model::Game& game) {
 }
 
 } // namespace serialization
-

@@ -1,3 +1,4 @@
+
 FROM gcc:11.3 AS build
 
 RUN apt update && \
@@ -30,4 +31,4 @@ COPY --from=build /app/build/bin/model_tests /app/build/
 COPY --from=build /app/build/bin/collision_detection_tests /app/build/
 COPY ./data /app/data
 COPY ./static /app/static
-ENTRYPOINT ["/app/game_server", "--config-file", "/app/data/config.json", "--www-root", "/app/static", "--state-file", "/tmp/volume/state", "--save-state-period", "1000"]
+ENTRYPOINT ["/app/game_server", "--config-file", "/app/data/config.json", "--www-root", "/app/static"]

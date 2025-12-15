@@ -42,4 +42,3 @@ class LootGenerator {
 };
 
 } // namespace loot_gen
-

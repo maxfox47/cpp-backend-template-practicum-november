@@ -316,4 +316,3 @@ ApiHandler::StringResponse ApiHandler::GoodTickRequest(const StringRequest& req)
 }
 
 } // namespace http_handler
-

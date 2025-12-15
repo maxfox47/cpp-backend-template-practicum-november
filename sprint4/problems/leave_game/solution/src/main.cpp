@@ -1,4 +1,3 @@
-#include "player.h"
 #include "sdk.h"
 
 #include <boost/asio/io_context.hpp>
@@ -14,6 +13,7 @@
 #include <string>
 #include <thread>
 
+#include "conn_pull.h"
 #include "json_loader.h"
 #include "logger.h"
 #include "request_handler.h"
@@ -107,6 +107,25 @@ struct Args {
 	return args;
 }
 
+void InitDatabaseSchema(ConnectionPool& connection_pool) {
+	auto connection = connection_pool.GetConnection();
+	pqxx::work transaction{*connection};
+
+	transaction.exec(
+		 "CREATE TABLE IF NOT EXISTS retired_players ("
+		 "    id          BIGSERIAL PRIMARY KEY,"
+		 "    name        TEXT NOT NULL,"
+		 "    score       INT  NOT NULL,"
+		 "    play_time   DOUBLE PRECISION NOT NULL"
+		 ");");
+
+	transaction.exec(
+		 "CREATE INDEX IF NOT EXISTS retired_players_score_playtime_name_idx "
+		 "ON retired_players (score DESC, play_time ASC, name ASC);");
+
+	transaction.commit();
+}
+
 } // namespace
 
 int main(int argc, const char* argv[]) {
@@ -119,12 +138,24 @@ int main(int argc, const char* argv[]) {
 	try {
 		InitLogging();
 
+		const char* db_url = std::getenv("GAME_DB_URL");
+		std::unique_ptr<ConnectionPool> connection_pool;
+		std::unique_ptr<Database> database;
+
+		if (db_url) {
+			connection_pool = std::make_unique<ConnectionPool>(
+				 1, [db_url]() { return std::make_shared<pqxx::connection>(db_url); });
+			InitDatabaseSchema(*connection_pool);
+			database = std::make_unique<Database>(*connection_pool);
+		}
+
 		// 1. Загружаем карту из файла и построить модель игры
 		model::Game game = json_loader::LoadGame(args.config_file);
 		std::filesystem::path static_path = args.www_root;
 		app::Players players;
 		app::PlayerTokens tokens;
-		StateSaver state_saver(game, args.save_period, args.state_file.value_or(""), players, tokens);
+		StateSaver state_saver(
+			 game, args.save_period, args.state_file.value_or(""), players, tokens, database.get());
 
 		if (args.state_file) {
 			try {
@@ -150,9 +181,10 @@ int main(int argc, const char* argv[]) {
 		});
 
 		// 4. Создаём обработчик HTTP-запросов и связываем его с моделью игры
+		// http_handler::RequestHandler handler{game, std::filesystem::absolute(static_path)};
 		auto handler = std::make_shared<http_handler::RequestHandler>(
 			 game, std::filesystem::absolute(static_path), api_strand, args.randomize_spawn_points,
-			 args.tick_period.has_value(), state_saver, players, tokens);
+			 args.tick_period.has_value(), state_saver, players, tokens, database.get());
 		http_handler::LoggingRequestHandler log_handler(*handler);
 
 		std::shared_ptr<Ticker> ticker;

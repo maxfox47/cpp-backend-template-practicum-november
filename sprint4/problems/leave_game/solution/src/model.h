@@ -58,6 +58,12 @@ struct TakenItem {
 	size_t id;
 };
 
+struct RetiredPlayerRecord {
+	std::string name;
+	int score = 0;
+	double play_time = 0;
+};
+
 inline bool operator==(const TakenItem& v1, const TakenItem& v2) {
 	return v1.type == v2.type && v1.id == v2.id;
 }
@@ -230,18 +236,29 @@ class Dog {
 	}
 
 	const BagContent& GetBag() const { return bag_; }
-
 	void ClearBag() { bag_.clear(); }
-
 	size_t GetBagSize() const { return bag_.size(); }
 
 	void AddScore(int score) { score_ += score; }
-
 	int GetScore() const { return score_; }
 
 	void SetBagCapacity(int capacity) { bag_capacity_ = capacity; }
-
 	int GetBagCapacity() const { return bag_capacity_; }
+
+	void UpdateIdleTime(double ms) {
+		if (speed_.x == 0 && speed_.y == 0) {
+			idle_time_ += ms;
+		} else {
+			idle_time_ = 0;
+		}
+	}
+
+	double GetIdleTime() const { return idle_time_; }
+	void ResetIdleTime() { idle_time_ = 0; }
+
+	void SetPlayTime(double time) { play_time_ = time; }
+	double GetPlayTime() const { return play_time_; }
+	void AddPlayTime(double ms) { play_time_ += ms; }
 
  private:
 	std::string name_;
@@ -252,6 +269,8 @@ class Dog {
 	BagContent bag_;
 	int score_ = 0;
 	int bag_capacity_ = 3;
+	double idle_time_ = 0;
+	double play_time_ = 0;
 };
 
 class GameSession {
@@ -314,6 +333,8 @@ class Game {
 
 		return nullptr;
 	}
+	void SetRetirementTime(double time) { retirement_time_ = time; }
+	double GetRetirementTime() { return retirement_time_; }
 
  private:
 	using MapIdHasher = util::TaggedHasher<Map::Id>;
@@ -324,6 +345,7 @@ class Game {
 	std::deque<GameSession> sessions_;
 	double loot_period_;
 	double loot_probability_;
+	double retirement_time_ = 60;
 };
 
 } // namespace model

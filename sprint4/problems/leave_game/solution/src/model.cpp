@@ -180,6 +180,9 @@ void GameSession::Tick(double ms) {
 			dog.SetSpeed({0, 0});
 		}
 
+		dog.AddPlayTime(ms / 1000.0);
+		dog.UpdateIdleTime(ms);
+
 		provider.AddGatherer({old_pos, new_pos, 0.3});
 	}
 

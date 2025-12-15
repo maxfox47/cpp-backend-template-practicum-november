@@ -3,6 +3,7 @@
 #include "model.h"
 
 #include <boost/json.hpp>
+#include <chrono>
 #include <deque>
 #include <iomanip>
 #include <random>
@@ -23,7 +24,7 @@ struct PlayerInfo {
 class Player {
  public:
 	explicit Player(model::GameSession* session, model::Dog* dog, uint64_t id)
-		 : dog_(dog), session_(session), id_(id) {
+		 : dog_(dog), session_(session), id_(id), join_time_(std::chrono::steady_clock::now()) {
 		if (!session)
 			throw std::invalid_argument("Session cannot be null");
 		if (!dog)
@@ -55,10 +56,19 @@ class Player {
 
 	const std::vector<model::TakenItem>& GetBag() const { return dog_->GetBag(); }
 
+	std::chrono::steady_clock::time_point GetJoinTime() const { return join_time_; }
+
+	double GetTotalPlayTime() const {
+		auto now = std::chrono::steady_clock::now();
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - join_time_);
+		return duration.count() / 1000.0;
+	}
+
  private:
 	model::Dog* dog_;
 	model::GameSession* session_;
 	uint64_t id_;
+	std::chrono::steady_clock::time_point join_time_;
 };
 
 class Players {
@@ -126,6 +136,10 @@ class PlayerTokens {
 		return token_to_player_;
 	}
 
+	std::unordered_map<Token, Player*, util::TaggedHasher<Token>>& GetAll() noexcept {
+		return token_to_player_;
+	}
+
 	void SetTokenForPlayer(const Token& token, Player* player) { token_to_player_[token] = player; }
 
  private:
@@ -143,4 +157,3 @@ class PlayerTokens {
 };
 
 } // namespace app
-
