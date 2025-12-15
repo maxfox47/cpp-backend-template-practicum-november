@@ -13,7 +13,7 @@
 #include <string>
 #include <thread>
 
-#include "conn_pull.h"
+#include "database.h"
 #include "json_loader.h"
 #include "logger.h"
 #include "request_handler.h"
@@ -107,9 +107,9 @@ struct Args {
 	return args;
 }
 
-void InitDatabaseSchema(ConnectionPool& connection_pool) {
-	auto connection = connection_pool.GetConnection();
-	pqxx::work transaction{*connection};
+void InitDatabaseSchema(const std::string& db_url) {
+	pqxx::connection connection{db_url};
+	pqxx::work transaction{connection};
 
 	transaction.exec(
 		 "CREATE TABLE IF NOT EXISTS retired_players ("
@@ -138,15 +138,21 @@ int main(int argc, const char* argv[]) {
 	try {
 		InitLogging();
 
-		const char* db_url = std::getenv("GAME_DB_URL");
-		std::unique_ptr<ConnectionPool> connection_pool;
+		const char* db_url_cstr = std::getenv("GAME_DB_URL");
 		std::unique_ptr<Database> database;
 
-		if (db_url) {
-			connection_pool = std::make_unique<ConnectionPool>(
-				 1, [db_url]() { return std::make_shared<pqxx::connection>(db_url); });
-			InitDatabaseSchema(*connection_pool);
-			database = std::make_unique<Database>(*connection_pool);
+		if (db_url_cstr) {
+			std::string db_url{db_url_cstr};
+			// Инициализируем схему БД. Если не удалось подключиться, продолжаем
+			// работу без БД: соответствующие обработки запросов вернут ошибку.
+			try {
+				InitDatabaseSchema(db_url);
+				database = std::make_unique<Database>(db_url);
+			} catch (const std::exception& ex) {
+				BOOST_LOG_TRIVIAL(error)
+					 << logging::add_value(exception_c, ex.what())
+					 << "failed to initialize database schema";
+			}
 		}
 
 		// 1. Загружаем карту из файла и построить модель игры

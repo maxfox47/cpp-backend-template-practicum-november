@@ -1,19 +1,18 @@
 #pragma once
 
-#include "conn_pull.h"
 #include "model.h"
 
 #include <pqxx/pqxx>
+#include <string>
 #include <vector>
 
 class Database {
  public:
-	explicit Database(ConnectionPool& connection_pool) noexcept
-		 : connection_pool_{connection_pool} {}
+	explicit Database(std::string db_url) : db_url_(std::move(db_url)) {}
 
 	void SaveRetiredPlayer(const model::RetiredPlayerRecord& record) {
-		auto connection = connection_pool_.GetConnection();
-		pqxx::work transaction{*connection};
+		pqxx::connection connection{db_url_};
+		pqxx::work transaction{connection};
 
 		transaction.exec_params(
 			 "INSERT INTO retired_players (name, score, play_time) VALUES ($1, $2, $3)",
@@ -23,8 +22,8 @@ class Database {
 	}
 
 	std::vector<model::RetiredPlayerRecord> GetRecords(int start_index, int max_items) {
-		auto connection = connection_pool_.GetConnection();
-		pqxx::read_transaction transaction{*connection};
+		pqxx::connection connection{db_url_};
+		pqxx::read_transaction transaction{connection};
 
 		auto result = transaction.exec_params(
 			 "SELECT name, score, play_time FROM retired_players "
@@ -47,5 +46,5 @@ class Database {
 	}
 
  private:
-	ConnectionPool& connection_pool_;
+	std::string db_url_;
 };
