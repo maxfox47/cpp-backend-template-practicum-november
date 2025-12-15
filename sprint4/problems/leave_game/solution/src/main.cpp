@@ -140,20 +140,24 @@ int main(int argc, const char* argv[]) {
 	try {
 		InitLogging();
 
-		const char* db_url = std::getenv("GAME_DB_URL");
+		const char* db_url_cstr = std::getenv("GAME_DB_URL");
 		std::unique_ptr<ConnectionPool> connection_pool;
 		std::unique_ptr<Database> database;
 
-		if (db_url) {
-			connection_pool = std::make_unique<ConnectionPool>(
-				 1, [db_url]() { return std::make_shared<pqxx::connection>(db_url); });
+		if (db_url_cstr) {
 			try {
+				connection_pool = std::make_unique<ConnectionPool>(
+					 1, [db_url_cstr]() { return std::make_shared<pqxx::connection>(db_url_cstr); });
+
 				InitDatabaseSchema(*connection_pool);
 				database = std::make_unique<Database>(*connection_pool);
 			} catch (const std::exception& ex) {
+				// Не даём серверу упасть из‑за проблем с БД: просто логируем и продолжаем без неё.
 				BOOST_LOG_TRIVIAL(error)
 					 << logging::add_value(exception_c, ex.what())
 					 << "failed to initialize database schema";
+				connection_pool.reset();
+				database.reset();
 			}
 		}
 
