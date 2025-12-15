@@ -140,17 +140,30 @@ int main(int argc, const char* argv[]) {
 	try {
 		InitLogging();
 
+		const char* db_url_cstr = std::getenv("GAME_DB_URL");
+		std::unique_ptr<ConnectionPool> connection_pool;
+		std::unique_ptr<Database> database;
+
+		if (db_url_cstr) {
+			std::string db_url{db_url_cstr};
+			try {
+				connection_pool = std::make_unique<ConnectionPool>(
+					 1, [db_url]() { return std::make_shared<pqxx::connection>(db_url); });
+				InitDatabaseSchema(*connection_pool);
+				database = std::make_unique<Database>(*connection_pool);
+			} catch (...) {
+				connection_pool.reset();
+				database.reset();
+			}
+		}
+
 		// 1. Загружаем карту из файла и построить модель игры
 		model::Game game = json_loader::LoadGame(args.config_file);
 		std::filesystem::path static_path = args.www_root;
 		app::Players players;
 		app::PlayerTokens tokens;
-		
-		const char* db_url_cstr = std::getenv("GAME_DB_URL");
-		Database* database_ptr = nullptr;
-		
 		StateSaver state_saver(
-			 game, args.save_period, args.state_file.value_or(""), players, tokens, database_ptr);
+			 game, args.save_period, args.state_file.value_or(""), players, tokens, database.get());
 
 		if (args.state_file) {
 			try {
@@ -179,7 +192,7 @@ int main(int argc, const char* argv[]) {
 		// http_handler::RequestHandler handler{game, std::filesystem::absolute(static_path)};
 		auto handler = std::make_shared<http_handler::RequestHandler>(
 			 game, std::filesystem::absolute(static_path), api_strand, args.randomize_spawn_points,
-			 args.tick_period.has_value(), state_saver, players, tokens, database_ptr);
+			 args.tick_period.has_value(), state_saver, players, tokens, database.get());
 		http_handler::LoggingRequestHandler log_handler(*handler);
 
 		std::shared_ptr<Ticker> ticker;
