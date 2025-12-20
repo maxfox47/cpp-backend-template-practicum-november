@@ -9,19 +9,25 @@
 namespace model {
 using namespace std::literals;
 
+bool Road::CheckPointOnRoad(double point_f, double min_f, double max_f) const {
+	return point_f >= min_f - HALF_WIDTH && point_f <= max_f + HALF_WIDTH;
+}
+
+bool Road::CheckOnOneLine(double pos, double start) const {
+	return std::abs(pos - start) <= HALF_WIDTH;
+}
+
 bool Road::IsOnRoad(geom::Point2D pos) const {
 	if (IsHorizontal()) {
 		double min_x = std::min(start_.x, end_.x);
 		double max_x = std::max(start_.x, end_.x);
-		if (pos.x >= min_x - HALF_WIDTH && pos.x <= max_x + HALF_WIDTH &&
-			 std::abs(pos.y - start_.y) <= HALF_WIDTH) {
+		if (CheckPointOnRoad(pos.x, min_x, max_x) && CheckOnOneLine(pos.y, start_.y)) {
 			return true;
 		}
 	} else {
 		double min_y = std::min(start_.y, end_.y);
 		double max_y = std::max(start_.y, end_.y);
-		if (pos.y >= min_y - HALF_WIDTH && pos.y <= max_y + HALF_WIDTH &&
-			 std::abs(pos.x - start_.x) <= HALF_WIDTH) {
+		if (CheckPointOnRoad(pos.y, min_y, max_y) && CheckOnOneLine(pos.x, start_.x)) {
 			return true;
 		}
 	}
@@ -122,8 +128,9 @@ std::pair<geom::Point2D, bool> Map::MoveDog(geom::Point2D pos, geom::Vec2D speed
 	for (const Road* road : roads_at_pos) {
 		if (road->IsHorizontal()) {
 			if (moving_horizontally) {
-				double x = speed.x > 0 ? (std::max(road->GetStart().x, road->GetEnd().x) + 0.4)
-											  : (std::min(road->GetStart().x, road->GetEnd().x) - 0.4);
+				double x = speed.x > 0
+									? (std::max(road->GetStart().x, road->GetEnd().x) + Road::HALF_WIDTH)
+									: (std::min(road->GetStart().x, road->GetEnd().x) - Road::HALF_WIDTH);
 				geom::Point2D new_max_pos = {x, pos.y};
 				max_pos = (speed.x > 0 && new_max_pos.x > max_pos.x) ||
 										(speed.x < 0 && new_max_pos.x < max_pos.x)

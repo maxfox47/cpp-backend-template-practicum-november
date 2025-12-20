@@ -33,11 +33,11 @@ model::Road LoadRoad(const json::value& road_json_not) {
 	if (last_point != road_json.end()) {
 		model::Road road(model::Road::HORIZONTAL, point_start, last_point->value().as_int64());
 		return road;
-	} else {
-		last_point = road_json.find("y1");
-		model::Road road(model::Road::VERTICAL, point_start, last_point->value().as_int64());
-		return road;
 	}
+
+	last_point = road_json.find("y1");
+	model::Road road(model::Road::VERTICAL, point_start, last_point->value().as_int64());
+	return road;
 }
 
 model::Building LoadBuilding(const json::value& building_json_not) {
