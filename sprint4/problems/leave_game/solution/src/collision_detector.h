@@ -2,6 +2,7 @@
 
 #include "geom.h"
 
+#include <algorithm>
 #include <vector>
 
 namespace collision_detector {
