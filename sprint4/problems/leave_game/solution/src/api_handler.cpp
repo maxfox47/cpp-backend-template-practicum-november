@@ -315,10 +315,10 @@ ApiHandler::StringResponse ApiHandler::GoodTickRequest(const StringRequest& req)
 	return response;
 }
 
-ApiHandler::StringResponse ApiHandler::GoodRecordsRequest(const StringRequest& req, int start_index,
-																			 int max_items_count) {
+ApiHandler::StringResponse ApiHandler::GoodRecordsRequest(const StringRequest& req, int start,
+																			 int max_items) {
 	try {
-		auto records = db_.GetRecords(start_index, max_items_count);
+		auto records = db_.GetRecords(start, max_items);
 
 		json::array arr;
 		for (const auto& record : records) {

@@ -128,10 +128,6 @@ int main(int argc, const char* argv[]) {
 		app::PlayerTokens tokens;
 
 		const char* db_url = std::getenv("GAME_DB_URL");
-		if (!db_url) {
-			throw std::runtime_error("GAME_DB_URL environment variable is not set");
-		}
-
 		std::unique_ptr<database::ConnectionPool> connection_pool;
 		std::unique_ptr<database::Database> database;
 
@@ -147,7 +143,7 @@ int main(int argc, const char* argv[]) {
 
 		// Инициализируем схему БД после вывода "server started"
 		try {
-			database->InitializeSchema();
+			database->InitDb();
 		} catch (const std::exception& ex) {
 			BOOST_LOG_TRIVIAL(error)
 				 << logging::add_value(exception_c, ex.what()) << "failed to initialize database schema";

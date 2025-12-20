@@ -3,11 +3,10 @@
 #include "conn_pull.h"
 
 #include <string>
-#include <vector>
 
 namespace database {
 
-struct RetiredPlayerRecord {
+struct RetiredPlayer {
 	std::string name;
 	int score;
 	double play_time;
@@ -15,14 +14,14 @@ struct RetiredPlayerRecord {
 
 class Database {
  public:
-	explicit Database(ConnectionPool& pool) : pool_{pool} {}
+	Database(ConnectionPool& pool) : pool_(pool) {}
 
-	void InitializeSchema();
+	void InitDb();
 	void SaveRetiredPlayer(const std::string& name, int score, double play_time);
-	std::vector<RetiredPlayerRecord> GetRecords(int start_index = 0, int max_items_count = 100);
+	std::vector<RetiredPlayer> GetRecords(int start = 0, int max_items = 100);
 
  private:
 	ConnectionPool& pool_;
 };
 
-}  // namespace database
+} // namespace database

@@ -3,7 +3,6 @@
 #include <pqxx/pqxx>
 
 #include <condition_variable>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <utility>
@@ -14,12 +13,11 @@ namespace database {
 class ConnectionPool {
 	using PoolType = ConnectionPool;
 	using ConnectionPtr = std::shared_ptr<pqxx::connection>;
-	using ConnectionFactory = std::function<ConnectionPtr()>;
 
  public:
 	class ConnectionWrapper {
 	 public:
-		ConnectionWrapper(ConnectionPtr conn, PoolType& pool) noexcept
+		ConnectionWrapper(std::shared_ptr<pqxx::connection>&& conn, PoolType& pool) noexcept
 			 : conn_{std::move(conn)}, pool_{&pool} {}
 
 		ConnectionWrapper(const ConnectionWrapper&) = delete;
@@ -40,53 +38,45 @@ class ConnectionPool {
 		}
 
 	 private:
-		ConnectionPtr conn_;
+		std::shared_ptr<pqxx::connection> conn_;
 		PoolType* pool_;
 	};
 
-	template <typename Factory>
-	ConnectionPool(size_t capacity, Factory&& connection_factory)
-		 : capacity_{capacity}, connection_factory_{std::forward<Factory>(connection_factory)} {
-		pool_.reserve(capacity_);
+	// ConnectionFactory is a functional object returning std::shared_ptr<pqxx::connection>
+	template <typename ConnectionFactory>
+	ConnectionPool(size_t capacity, ConnectionFactory&& connection_factory) {
+		pool_.reserve(capacity);
+		for (size_t i = 0; i < capacity; ++i) {
+			pool_.emplace_back(connection_factory());
+		}
 	}
 
 	ConnectionWrapper GetConnection() {
 		std::unique_lock lock{mutex_};
-
-		// Если есть свободное соединение в пуле, используем его
-		if (used_connections_ < pool_.size()) {
-			return {std::move(pool_[used_connections_++]), *this};
-		}
-
-		// Если пул не заполнен, создаём новое соединение
-		if (pool_.size() < capacity_) {
-			auto conn = connection_factory_();
-			pool_.push_back(conn);
-			used_connections_++;
-			return {std::move(conn), *this};
-		}
-
-		// Ждём, пока освободится соединение
+		// Блокируем текущий поток и ждём, пока cond_var_ не получит уведомление и не освободится
+		// хотя бы одно соединение
 		cond_var_.wait(lock, [this] { return used_connections_ < pool_.size(); });
+		// После выхода из цикла ожидания мьютекс остаётся захваченным
+
 		return {std::move(pool_[used_connections_++]), *this};
 	}
 
  private:
 	void ReturnConnection(ConnectionPtr&& conn) {
+		// Возвращаем соединение обратно в пул
 		{
 			std::lock_guard lock{mutex_};
 			assert(used_connections_ != 0);
 			pool_[--used_connections_] = std::move(conn);
 		}
+		// Уведомляем один из ожидающих потоков об изменении состояния пула
 		cond_var_.notify_one();
 	}
 
 	std::mutex mutex_;
 	std::condition_variable cond_var_;
 	std::vector<ConnectionPtr> pool_;
-	size_t capacity_;
-	ConnectionFactory connection_factory_;
 	size_t used_connections_ = 0;
 };
 
-}  // namespace database
+} // namespace database
