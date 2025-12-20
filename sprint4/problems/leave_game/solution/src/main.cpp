@@ -128,18 +128,18 @@ int main(int argc, const char* argv[]) {
 		app::PlayerTokens tokens;
 
 		const char* db_url = std::getenv("GAME_DB_URL");
-		std::unique_ptr<database::ConnectionPool> pool;
-		std::unique_ptr<database::Database> db;
-
 		if (!db_url) {
 			throw std::runtime_error("GAME_DB_URL environment variable is not set");
 		}
 
+		std::unique_ptr<database::ConnectionPool> connection_pool;
+		std::unique_ptr<database::Database> database;
+
 		try {
-			pool = std::make_unique<database::ConnectionPool>(
+			connection_pool = std::make_unique<database::ConnectionPool>(
 				 1, [db_url] { return std::make_shared<pqxx::connection>(db_url); });
-			db = std::make_unique<database::Database>(*pool);
-			db->InitDb();
+			database = std::make_unique<database::Database>(*connection_pool);
+			database->InitializeSchema();
 		} catch (const std::exception& ex) {
 			BOOST_LOG_TRIVIAL(error)
 				 << logging::add_value(exception_c, ex.what()) << "failed to initialize database";
@@ -147,7 +147,7 @@ int main(int argc, const char* argv[]) {
 		}
 
 		StateSaver state_saver(game, args.save_period, args.state_file.value_or(""), players, tokens,
-									  *db);
+									  *database);
 
 		if (args.state_file) {
 			try {
@@ -176,7 +176,7 @@ int main(int argc, const char* argv[]) {
 		// http_handler::RequestHandler handler{game, std::filesystem::absolute(static_path)};
 		auto handler = std::make_shared<http_handler::RequestHandler>(
 			 game, std::filesystem::absolute(static_path), api_strand, args.randomize_spawn_points,
-			 args.tick_period.has_value(), state_saver, players, tokens, *db);
+			 args.tick_period.has_value(), state_saver, players, tokens, *database);
 		http_handler::LoggingRequestHandler log_handler(*handler);
 
 		std::shared_ptr<Ticker> ticker;

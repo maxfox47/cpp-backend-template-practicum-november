@@ -348,8 +348,8 @@ class ApiHandler {
 		auto ver = req.version();
 		CheckMethod(req, send, "GET");
 
-		int start = 0;
-		int max_items = 100;
+		int start_index = 0;
+		int max_items_count = 100;
 
 		std::string target = std::string(req.target());
 		size_t query_pos = target.find('?');
@@ -373,10 +373,10 @@ class ApiHandler {
 
 				try {
 					if (key == "start") {
-						start = std::stoi(value);
+						start_index = std::stoi(value);
 					} else if (key == "maxItems") {
-						max_items = std::stoi(value);
-						if (max_items > 100) {
+						max_items_count = std::stoi(value);
+						if (max_items_count > 100) {
 							return send(ErrorRequest("badRequest", "maxItems cannot exceed 100",
 															 http::status::bad_request, ver));
 						}
@@ -390,7 +390,7 @@ class ApiHandler {
 			}
 		}
 
-		return send(GoodRecordsRequest(req, start, max_items));
+		return send(GoodRecordsRequest(req, start_index, max_items_count));
 	}
 
 	json::array AddRoads(const model::Map* map) const;
@@ -409,7 +409,7 @@ class ApiHandler {
 	StringResponse GoogMoveRequest(const StringRequest& req);
 	std::optional<json::object> ParseTickRequest(const StringRequest& request);
 	StringResponse GoodTickRequest(const StringRequest& req);
-	StringResponse GoodRecordsRequest(const StringRequest& req, int start, int max_items);
+	StringResponse GoodRecordsRequest(const StringRequest& req, int start_index, int max_items_count);
 
 	model::Game& game_;
 	app::Players& players_;
