@@ -315,21 +315,17 @@ ApiHandler::StringResponse ApiHandler::GoodTickRequest(const StringRequest& req)
 	return response;
 }
 
-// Обрабатывает запрос на получение записей об ушедших игроках
-// Возвращает JSON-массив с записями, отсортированными по приоритету (score DESC, play_time ASC, name ASC)
 ApiHandler::StringResponse ApiHandler::GoodRecordsRequest(const StringRequest& req, int start,
 																			 int max_items) {
 	try {
-		// Получаем записи из базы данных с пагинацией
-		auto records = database_.GetRecords(start, max_items);
+		auto records = db_.GetRecords(start, max_items);
 
-		// Формируем JSON-ответ из полученных записей
 		json::array arr;
 		for (const auto& record : records) {
 			json::object obj;
 			obj["name"] = record.name;
 			obj["score"] = record.score;
-			obj["playTime"] = record.play_time;  // Время игры в секундах
+			obj["playTime"] = record.play_time;
 			arr.push_back(obj);
 		}
 
@@ -345,8 +341,7 @@ ApiHandler::StringResponse ApiHandler::GoodRecordsRequest(const StringRequest& r
 
 		return response;
 	} catch (const std::exception& ex) {
-		// В случае ошибки БД возвращаем внутреннюю ошибку сервера
-		return ErrorRequest("internalError", "Database error occurred", http::status::internal_server_error,
+		return ErrorRequest("databaseError", ex.what(), http::status::internal_server_error,
 								  req.version());
 	}
 }

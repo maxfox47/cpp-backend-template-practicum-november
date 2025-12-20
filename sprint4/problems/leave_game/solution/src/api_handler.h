@@ -89,9 +89,9 @@ class ApiHandler {
 	using StringResponse = http::response<http::string_body>;
 
 	explicit ApiHandler(model::Game& game, bool randomize, bool auto_tick, StateSaver& saver,
-							  app::Players& players, app::PlayerTokens& tokens, database::Database& database)
+							  app::Players& players, app::PlayerTokens& tokens, database::Database& db)
 		 : game_(game), randomize_(randomize), auto_tick_(auto_tick), state_saver_(saver),
-			players_(players), players_tokens_(tokens), database_(database) {}
+			players_(players), players_tokens_(tokens), db_(db) {}
 
 	template <typename Body, typename Allocator, typename Send>
 	void operator()(const EndPoint& endpoint,
@@ -343,18 +343,14 @@ class ApiHandler {
 		return send(GoodTickRequest(req));
 	}
 
-	// Обрабатывает GET-запрос на получение записей об ушедших игроках
-	// Поддерживает query-параметры: start (индекс начала) и maxItems (максимальное количество записей)
 	template <typename Body, typename Allocator, typename Send>
 	void RecordsRequest(const http::request<Body, http::basic_fields<Allocator>>& req, Send&& send) {
 		auto ver = req.version();
 		CheckMethod(req, send, "GET");
 
-		// Значения по умолчанию для пагинации
 		int start = 0;
 		int max_items = 100;
 
-		// Парсим query-параметры из URL
 		std::string target = std::string(req.target());
 		size_t query_pos = target.find('?');
 		if (query_pos != std::string::npos) {
@@ -380,7 +376,6 @@ class ApiHandler {
 						start = std::stoi(value);
 					} else if (key == "maxItems") {
 						max_items = std::stoi(value);
-						// Проверяем, что maxItems не превышает лимит
 						if (max_items > 100) {
 							return send(ErrorRequest("badRequest", "maxItems cannot exceed 100",
 															 http::status::bad_request, ver));
@@ -422,7 +417,7 @@ class ApiHandler {
 	bool randomize_;
 	bool auto_tick_;
 	StateSaver& state_saver_;
-	database::Database& database_;
+	database::Database& db_;
 };
 
 } // namespace http_handler
