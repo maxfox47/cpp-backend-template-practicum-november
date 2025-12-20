@@ -50,7 +50,7 @@ add_executable(game_server
 	src/serialization.cpp
 	src/state_saver.h
 	src/model_serialization.h
-	src/conn_pull.h
+	src/connection_pool.h
 	src/database.h
 	src/database.cpp
 )

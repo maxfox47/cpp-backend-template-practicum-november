@@ -1,4 +1,4 @@
-#include "conn_pull.h"
+#include "connection_pool.h"
 #include "player.h"
 #include "sdk.h"
 
@@ -121,15 +121,18 @@ int main(int argc, const char* argv[]) {
 	try {
 		InitLogging();
 
-		const char* db_url = std::getenv("GAME_DB_URL");
-		if (!db_url) {
-			throw std::runtime_error("DB URL is not specified");
+		// Инициализация подключения к базе данных PostgreSQL
+		const char* database_url = std::getenv("GAME_DB_URL");
+		if (!database_url) {
+			throw std::runtime_error("GAME_DB_URL environment variable is not set");
 		}
 
-		database::ConnectionPool pool(
-			 10, [db_url] { return std::make_shared<pqxx::connection>(db_url); });
-		database::Database db(pool);
-		db.InitDb();
+		// Создаем пул соединений с БД (10 соединений)
+		database::ConnectionPool connection_pool(
+			 10, [database_url] { return std::make_shared<pqxx::connection>(database_url); });
+		database::Database database(connection_pool);
+		// Создаем таблицу retired_players и индекс, если их еще нет
+		database.InitializeSchema();
 
 		// 1. Загружаем карту из файла и построить модель игры
 		model::Game game = json_loader::LoadGame(args.config_file);
@@ -137,7 +140,7 @@ int main(int argc, const char* argv[]) {
 		app::Players players;
 		app::PlayerTokens tokens;
 		StateSaver state_saver(game, args.save_period, args.state_file.value_or(""), players, tokens,
-									  db);
+									  database);
 
 		if (args.state_file) {
 			try {
@@ -163,10 +166,9 @@ int main(int argc, const char* argv[]) {
 		});
 
 		// 4. Создаём обработчик HTTP-запросов и связываем его с моделью игры
-		// http_handler::RequestHandler handler{game, std::filesystem::absolute(static_path)};
 		auto handler = std::make_shared<http_handler::RequestHandler>(
 			 game, std::filesystem::absolute(static_path), api_strand, args.randomize_spawn_points,
-			 args.tick_period.has_value(), state_saver, players, tokens, db);
+			 args.tick_period.has_value(), state_saver, players, tokens, database);
 		http_handler::LoggingRequestHandler log_handler(*handler);
 
 		std::shared_ptr<Ticker> ticker;
