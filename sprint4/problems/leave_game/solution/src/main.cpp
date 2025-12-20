@@ -137,7 +137,7 @@ int main(int argc, const char* argv[]) {
 
 		try {
 			pool = std::make_unique<database::ConnectionPool>(
-				 10, [db_url] { return std::make_shared<pqxx::connection>(db_url); });
+				 1, [db_url] { return std::make_shared<pqxx::connection>(db_url); });
 			db = std::make_unique<database::Database>(*pool);
 			db->InitDb();
 		} catch (const std::exception& ex) {
