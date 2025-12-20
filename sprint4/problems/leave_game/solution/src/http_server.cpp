@@ -59,9 +59,6 @@ void SessionBase::Close() {
 	try {
 		stream_.socket().shutdown(tcp::socket::shutdown_send);
 	} catch (...) {
-		BOOST_LOG_TRIVIAL(error)
-			 << logging::add_value(exception_c, "error closing the socket")
-			 << "The connection which are trying to close has already been terminated";
 	}
 }
 

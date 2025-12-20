@@ -6,8 +6,6 @@
 
 namespace database {
 
-constexpr int MAX_ITEMS = 100;
-
 struct RetiredPlayer {
 	std::string name;
 	int score;
@@ -20,7 +18,7 @@ class Database {
 
 	void InitDb();
 	void SaveRetiredPlayer(const std::string& name, int score, double play_time);
-	std::vector<RetiredPlayer> GetRecords(int start = 0, int max_items = MAX_ITEMS);
+	std::vector<RetiredPlayer> GetRecords(int start = 0, int max_items = 100);
 
  private:
 	ConnectionPool& pool_;
