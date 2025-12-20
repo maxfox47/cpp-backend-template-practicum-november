@@ -13,7 +13,7 @@ class StateSaver {
  public:
 	explicit StateSaver(model::Game& game, std::optional<uint32_t> period_ms,
 							  const std::string state_file, app::Players& players,
-							  app::PlayerTokens& tokens, database::Database& db)
+							  app::PlayerTokens& tokens, database::Database db)
 		 : game_(game), players_(players), tokens_(tokens), period_ms_(period_ms),
 			state_file_(state_file), db_(db) {}
 

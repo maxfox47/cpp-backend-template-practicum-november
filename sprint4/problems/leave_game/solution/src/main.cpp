@@ -121,37 +121,23 @@ int main(int argc, const char* argv[]) {
 	try {
 		InitLogging();
 
+		const char* db_url = std::getenv("GAME_DB_URL");
+		if (!db_url) {
+			throw std::runtime_error("DB URL is not specified");
+		}
+
+		database::ConnectionPool pool(
+			 10, [db_url] { return std::make_shared<pqxx::connection>(db_url); });
+		database::Database db(pool);
+		db.InitDb();
+
 		// 1. Загружаем карту из файла и построить модель игры
 		model::Game game = json_loader::LoadGame(args.config_file);
 		std::filesystem::path static_path = args.www_root;
 		app::Players players;
 		app::PlayerTokens tokens;
-
-		const char* db_url = std::getenv("GAME_DB_URL");
-		std::unique_ptr<database::ConnectionPool> connection_pool;
-		std::unique_ptr<database::Database> database;
-
-		connection_pool = std::make_unique<database::ConnectionPool>(
-			 1, [db_url] { return std::make_shared<pqxx::connection>(db_url); });
-		database = std::make_unique<database::Database>(*connection_pool);
-
-		// Выводим "server started" сразу после создания пула, до инициализации схемы
-		// Это позволяет тестам увидеть, что сервер запустился, даже если БД ещё не готова
-		constexpr int port = 8080;
-		BOOST_LOG_TRIVIAL(info) << logging::add_value(port_p, port)
-										<< logging::add_value(ip_add, "0.0.0.0") << "server started";
-
-		// Инициализируем схему БД после вывода "server started"
-		try {
-			database->InitDb();
-		} catch (const std::exception& ex) {
-			BOOST_LOG_TRIVIAL(error)
-				 << logging::add_value(exception_c, ex.what()) << "failed to initialize database schema";
-			// Не прерываем запуск сервера, схема может быть уже создана
-		}
-
 		StateSaver state_saver(game, args.save_period, args.state_file.value_or(""), players, tokens,
-									  *database);
+									  db);
 
 		if (args.state_file) {
 			try {
@@ -180,7 +166,7 @@ int main(int argc, const char* argv[]) {
 		// http_handler::RequestHandler handler{game, std::filesystem::absolute(static_path)};
 		auto handler = std::make_shared<http_handler::RequestHandler>(
 			 game, std::filesystem::absolute(static_path), api_strand, args.randomize_spawn_points,
-			 args.tick_period.has_value(), state_saver, players, tokens, *database);
+			 args.tick_period.has_value(), state_saver, players, tokens, db);
 		http_handler::LoggingRequestHandler log_handler(*handler);
 
 		std::shared_ptr<Ticker> ticker;
@@ -196,10 +182,14 @@ int main(int argc, const char* argv[]) {
 
 		// 5. Запустить обработчик HTTP-запросов, делегируя их обработчику запросов
 		const auto address = net::ip::make_address("0.0.0.0");
+		constexpr int port = 8080;
 		http_server::ServeHttp(
 			 ioc, {address, port}, [&log_handler](auto&& req, const std::string ip, auto&& send) {
 				 log_handler(std::forward<decltype(req)>(req), ip, std::forward<decltype(send)>(send));
 			 });
+
+		BOOST_LOG_TRIVIAL(info) << logging::add_value(port_p, port)
+										<< logging::add_value(ip_add, "0.0.0.0") << "server started";
 
 		// 6. Запускаем обработку асинхронных операций
 		RunWorkers(std::max(1u, num_threads), [&ioc] { ioc.run(); });

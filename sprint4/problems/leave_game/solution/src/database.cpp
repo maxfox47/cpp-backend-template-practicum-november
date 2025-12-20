@@ -48,7 +48,7 @@ void Database::SaveRetiredPlayer(const std::string& name, int score, double play
 }
 
 std::vector<RetiredPlayer> Database::GetRecords(int start, int max_items) {
-	if (max_items > 100) {
+	if (max_items > MAX_ITEMS) {
 		throw std::invalid_argument("max_items cannot exceed 100");
 	}
 
