@@ -127,9 +127,9 @@ int main(int argc, const char* argv[]) {
 			throw std::runtime_error("GAME_DB_URL environment variable is not set");
 		}
 
-		// Создаем пул соединений с БД (10 соединений)
+		// Создаем пул соединений с БД (1 соединение для быстрого старта)
 		database::ConnectionPool connection_pool(
-			 10, [database_url] { return std::make_shared<pqxx::connection>(database_url); });
+			 1, [database_url] { return std::make_shared<pqxx::connection>(database_url); });
 		database::Database database(connection_pool);
 		// Создаем таблицу retired_players и индекс, если их еще нет
 		database.InitializeSchema();
@@ -190,6 +190,8 @@ int main(int argc, const char* argv[]) {
 				 log_handler(std::forward<decltype(req)>(req), ip, std::forward<decltype(send)>(send));
 			 });
 
+		// Логируем запуск сервера сразу после инициализации HTTP-сервера
+		// Это позволяет тестам увидеть, что сервер готов к работе
 		BOOST_LOG_TRIVIAL(info) << logging::add_value(port_p, port)
 										<< logging::add_value(ip_add, "0.0.0.0") << "server started";
 
