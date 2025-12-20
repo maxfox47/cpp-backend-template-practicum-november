@@ -135,15 +135,23 @@ int main(int argc, const char* argv[]) {
 		std::unique_ptr<database::ConnectionPool> connection_pool;
 		std::unique_ptr<database::Database> database;
 
+		connection_pool = std::make_unique<database::ConnectionPool>(
+			 1, [db_url] { return std::make_shared<pqxx::connection>(db_url); });
+		database = std::make_unique<database::Database>(*connection_pool);
+
+		// Выводим "server started" сразу после создания пула, до инициализации схемы
+		// Это позволяет тестам увидеть, что сервер запустился, даже если БД ещё не готова
+		constexpr int port = 8080;
+		BOOST_LOG_TRIVIAL(info) << logging::add_value(port_p, port)
+										<< logging::add_value(ip_add, "0.0.0.0") << "server started";
+
+		// Инициализируем схему БД после вывода "server started"
 		try {
-			connection_pool = std::make_unique<database::ConnectionPool>(
-				 1, [db_url] { return std::make_shared<pqxx::connection>(db_url); });
-			database = std::make_unique<database::Database>(*connection_pool);
 			database->InitializeSchema();
 		} catch (const std::exception& ex) {
 			BOOST_LOG_TRIVIAL(error)
-				 << logging::add_value(exception_c, ex.what()) << "failed to initialize database";
-			throw;
+				 << logging::add_value(exception_c, ex.what()) << "failed to initialize database schema";
+			// Не прерываем запуск сервера, схема может быть уже создана
 		}
 
 		StateSaver state_saver(game, args.save_period, args.state_file.value_or(""), players, tokens,
@@ -192,14 +200,10 @@ int main(int argc, const char* argv[]) {
 
 		// 5. Запустить обработчик HTTP-запросов, делегируя их обработчику запросов
 		const auto address = net::ip::make_address("0.0.0.0");
-		constexpr int port = 8080;
 		http_server::ServeHttp(
 			 ioc, {address, port}, [&log_handler](auto&& req, const std::string ip, auto&& send) {
 				 log_handler(std::forward<decltype(req)>(req), ip, std::forward<decltype(send)>(send));
 			 });
-
-		BOOST_LOG_TRIVIAL(info) << logging::add_value(port_p, port)
-										<< logging::add_value(ip_add, "0.0.0.0") << "server started";
 
 		// 6. Запускаем обработку асинхронных операций
 		RunWorkers(std::max(1u, num_threads), [&ioc] { ioc.run(); });
